@@ -1,0 +1,28 @@
+{
+    "files.exclude": {
+        "**/dart-sdk/**": true
+    },
+    "files.watcherExclude": {
+        "**/dart-sdk/**": true
+    },
+    "files.associations": {
+        "__locale": "cpp",
+        "functional": "cpp",
+        "__bit_reference": "cpp",
+        "algorithm": "cpp",
+        "bitset": "cpp",
+        "chrono": "cpp",
+        "hash_map": "cpp",
+        "hash_set": "cpp",
+        "map": "cpp",
+        "set": "cpp",
+        "unordered_map": "cpp",
+        "unordered_set": "cpp",
+        "variant": "cpp",
+        "ios": "cpp",
+        "random": "cpp",
+        "filesystem": "cpp",
+        "regex": "cpp",
+        "*.tcc": "cpp"
+    }
+}
