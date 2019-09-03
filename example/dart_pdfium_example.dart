@@ -2,8 +2,10 @@ import 'package:dart_pdfium/dart_pdfium.dart';
 
 main() {
   InitLibrary();
-  var doc = new Document("testing/hello_world.pdf", "");
-  doc.Close();
-  doc.Close();
+  try {
+    DP_CloseDocument(1);
+  } catch (e) {
+    // print(e);
+  }
   DestroyLibrary();
 }

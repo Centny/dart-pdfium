@@ -3,7 +3,9 @@ library pdfium;
 import 'dart-ext:dart_pdfium';
 
 void InitLibrary() native "DP_InitLibrary";
+void InitLibraryWithConfig(int version, String font) native "DP_InitLibraryWithConfig";
 void DestroyLibrary() native "DP_DestroyLibrary";
+int DP_LastError() native "DP_LastError";
 Object DP_LoadDocument(String filepath, password) native "DP_LoadDocument";
 void DP_CloseDocument(Object doc) native "DP_CloseDocument";
 int DP_GetFileVersion(Object doc) native "DP_GetFileVersion";
@@ -40,7 +42,7 @@ String DP_Text_GetText(Object text, int start_index, count) native "DP_Text_GetT
 int DP_Text_CountRects(Object text, int start_index, count) native "DP_Text_CountRects";
 List DP_Text_GetRect(Object text, int rect_index) native "DP_Text_GetRect";
 String DP_Text_GetBoundedText(Object text, double left, right, bottom, top) native "DP_Text_GetBoundedText";
-Object DP_Text_FindStart(Object text, String findwhat, int flags, start_index) native "DP_Text_FindStart";
+Object DP_Text_FindStart(Object text, findwhat, int flags, start_index) native "DP_Text_FindStart";
 bool DP_Text_FindNext(Object handle) native "DP_Text_FindNext";
 bool DP_Text_FindPrev(Object handle) native "DP_Text_FindPrev";
 int DP_Text_GetSchResultIndex(Object handle) native "DP_Text_GetSchResultIndex";
@@ -66,6 +68,7 @@ class Point {
 class Bookmark {
   Object _bookmark;
   Document _doc;
+  Object get nativeObject => _bookmark;
   Document get doc => _doc;
   Bookmark get next {
     Object bk = DP_Bookmark_GetNextSibling(_doc._doc, _bookmark);
@@ -107,6 +110,7 @@ class Finder {
   String _findwhat;
   int _flags;
   int _startIndex;
+  Object get nativeObject => _finder;
   PageText get text => _text;
   String get findwhat => _findwhat;
   int get flags => _flags;
@@ -129,6 +133,7 @@ final finderConsecutive = 0x00000004;
 class PageText {
   Object _text;
   Page _page;
+  Object get nativeObject => _text;
   Page get page => _page;
   int get countChars => DP_Text_CountChars(_text);
   int getUnicode(int index) => DP_Text_GetUnicode(_text, index);
@@ -218,7 +223,7 @@ class Bitmap {
       _bitmap = DP_Bitmap_CreateEx(width, height, format, firstScan, stride);
     }
   }
-  Object get bitmap => _bitmap;
+  Object get nativeObject => _bitmap;
   int get format => DP_Bitmap_GetFormat(_bitmap);
   Object get buffer => DP_Bitmap_GetBuffer(_bitmap);
   int get width => DP_Bitmap_GetWidth(_bitmap);
@@ -232,6 +237,7 @@ class Page {
   Object _page;
   Document _doc;
   int _index;
+  Object get nativeObject => _page;
   Document get document => _doc;
   int get index => _index;
   double get width => DP_GetPageWidth(_page);
@@ -251,7 +257,7 @@ class Page {
 
   Bitmap get thumbnail => DP_GetThumbnailAsBitmap(_page);
 
-  PageText get text {
+  PageText loadText() {
     Object t = DP_Text_LoadPage(_page);
     if (t == null) {
       return null;
@@ -263,7 +269,7 @@ class Page {
   }
 
   void render(Bitmap bitmap, int start_x, start_y, size_x, size_y, rotate, flags) =>
-      DP_RenderPageBitmap(bitmap.bitmap, _page, start_x, start_y, size_x, size_y, rotate, flags);
+      DP_RenderPageBitmap(bitmap._bitmap, _page, start_x, start_y, size_x, size_y, rotate, flags);
 
   void close() => DP_ClosePage(_page);
 
@@ -277,7 +283,13 @@ class Document {
   Document(String filepath, password) {
     _filepath = filepath;
     _doc = DP_LoadDocument(filepath, password);
+    print(_doc);
+    if (_doc == null) {
+      int err = DP_LastError();
+      throw new Exception("load $filepath fail wiht code $err");
+    }
   }
+  Object get nativeObject => _doc;
 
   String get filepath => _filepath;
 
