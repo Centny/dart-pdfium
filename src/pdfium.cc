@@ -2,9 +2,69 @@
 #include <stdio.h>
 #include "dart_api.h"
 #include "fpdfview.h"
+#include "fpdf_thumbnail.h"
+#include "fpdf_text.h"
+#include "fpdf_doc.h"
 // Forward declaration of ResolveName function.
 Dart_NativeFunction DP_ResolveName(Dart_Handle name, int argc, bool *auto_setup_scope);
 
+#define NativeArgPeer(name, index)                                   \
+    void *name = NULL;                                               \
+    Dart_Handle name##_h = Dart_GetNativeArgument(arguments, index); \
+    if (DP_CheckError(Dart_GetPeer(name##_h, &name)))                \
+    {                                                                \
+        return;                                                      \
+    }
+
+#define NativeArgPeerOptional(name, index)                                      \
+    void *name = NULL;                                                          \
+    Dart_Handle name##_h = Dart_GetNativeArgument(arguments, index);            \
+    if (!Dart_IsNull(name##_h) && DP_CheckError(Dart_GetPeer(name##_h, &name))) \
+    {                                                                           \
+        return;                                                                 \
+    }
+
+#define NativeArgInt64(name, index)                                  \
+    int64_t name = 0;                                                \
+    Dart_Handle name##_h = Dart_GetNativeArgument(arguments, index); \
+    if (DP_CheckError(Dart_IntegerToInt64(name##_h, &name)))         \
+    {                                                                \
+        return;                                                      \
+    }
+
+#define NativeArgCString(name, index)                                \
+    const char *name;                                                \
+    Dart_Handle name##_h = Dart_GetNativeArgument(arguments, index); \
+    if (DP_CheckError(Dart_StringToCString(name##_h, &name)))        \
+    {                                                                \
+        return;                                                      \
+    }
+
+#define NativeArgUTF16String(name, index)                               \
+    uint16_t name[1024];                                                \
+    intptr_t name##_len = 1024;                                         \
+    Dart_Handle name##_h = Dart_GetNativeArgument(arguments, index);    \
+    if (DP_CheckError(Dart_StringToUTF16(name##_h, name, &name##_len))) \
+    {                                                                   \
+        return;                                                         \
+    }                                                                   \
+    name[name##_len] = 0;
+
+#define NativeArgCStringOptional(name, index)                                           \
+    const char *name = NULL;                                                            \
+    Dart_Handle name##_h = Dart_GetNativeArgument(arguments, index);                    \
+    if (!Dart_IsNull(name##_h) && DP_CheckError(Dart_StringToCString(name##_h, &name))) \
+    {                                                                                   \
+        return;                                                                         \
+    }
+
+#define NativeArgDouble(name, index)                                 \
+    double name = 0;                                                 \
+    Dart_Handle name##_h = Dart_GetNativeArgument(arguments, index); \
+    if (DP_CheckError(Dart_DoubleValue(name##_h, &name)))            \
+    {                                                                \
+        return;                                                      \
+    }
 // The name of the initialization function is the extension name followed
 // by _Init.
 DART_EXPORT Dart_Handle dart_pdfium_Init(Dart_Handle parent_library)
@@ -90,20 +150,10 @@ void DP_InitLibrary(Dart_NativeArguments arguments)
 
 void DP_InitLibraryWithConfig(Dart_NativeArguments arguments)
 {
-    Dart_Handle version_h = Dart_GetNativeArgument(arguments, 0);
-    int64_t ver;
-    if (DP_CheckError(Dart_IntegerToInt64(version_h, &ver)))
-    {
-        return;
-    }
-    Dart_Handle font_h = Dart_GetNativeArgument(arguments, 1);
-    const char *font;
-    if (DP_CheckError(Dart_StringToCString(font_h, &font)))
-    {
-        return;
-    }
+    NativeArgInt64(version, 0);
+    NativeArgCString(font, 1);
     FPDF_LIBRARY_CONFIG config;
-    config.version = (int)ver;
+    config.version = (int)version;
     config.m_pUserFontPaths = &font;
     FPDF_InitLibraryWithConfig(&config);
 }
@@ -115,18 +165,8 @@ void DP_DestroyLibrary(Dart_NativeArguments arguments)
 
 void DP_LoadDocument(Dart_NativeArguments arguments)
 {
-    const char *filepath = NULL;
-    Dart_Handle filepath_h = Dart_GetNativeArgument(arguments, 0);
-    if (DP_CheckError(Dart_StringToCString(filepath_h, &filepath)))
-    {
-        return;
-    }
-    const char *password = NULL;
-    Dart_Handle password_h = Dart_GetNativeArgument(arguments, 1);
-    if (!Dart_IsNull(password_h) && DP_CheckError(Dart_StringToCString(password_h, &password)))
-    {
-        return;
-    }
+    NativeArgCString(filepath, 0);
+    NativeArgCStringOptional(password, 1);
     void *doc = FPDF_LoadDocument(filepath, password);
     if (!doc)
     {
@@ -140,26 +180,13 @@ void DP_LoadDocument(Dart_NativeArguments arguments)
 
 void DP_CloseDocument(Dart_NativeArguments arguments)
 {
-    void *doc = NULL;
-    Dart_Handle doc_h = Dart_GetNativeArgument(arguments, 0);
-    if (DP_CheckError(Dart_GetPeer(doc_h, &doc)))
-    {
-        Dart_SetReturnValue(arguments, Dart_NewApiError("get native doc fail"));
-        return;
-    }
+    NativeArgPeer(doc, 0);
     FPDF_CloseDocument((FPDF_DOCUMENT)doc);
-    Dart_SetPeer(doc_h, NULL);
 }
 
 void DP_GetFileVersion(Dart_NativeArguments arguments)
 {
-    void *doc = NULL;
-    Dart_Handle doc_h = Dart_GetNativeArgument(arguments, 0);
-    if (DP_CheckError(Dart_GetPeer(doc_h, &doc)))
-    {
-        Dart_SetReturnValue(arguments, Dart_NewApiError("get native doc fail"));
-        return;
-    }
+    NativeArgPeer(doc, 0);
     int fileVersion;
     if (!FPDF_GetFileVersion((FPDF_DOCUMENT)doc, &fileVersion))
     {
@@ -171,59 +198,35 @@ void DP_GetFileVersion(Dart_NativeArguments arguments)
 
 void DP_GetDocPermissions(Dart_NativeArguments arguments)
 {
-    void *doc = NULL;
-    Dart_Handle doc_h = Dart_GetNativeArgument(arguments, 0);
-    if (DP_CheckError(Dart_GetPeer(doc_h, &doc)))
-    {
-        Dart_SetReturnValue(arguments, Dart_NewApiError("get native doc fail"));
-        return;
-    }
+    NativeArgPeer(doc, 0);
     uint64_t permission = FPDF_GetDocPermissions((FPDF_DOCUMENT)doc);
     Dart_SetReturnValue(arguments, Dart_NewInteger(permission));
 }
 
 void DP_GetSecurityHandlerRevision(Dart_NativeArguments arguments)
 {
-    void *doc = NULL;
-    Dart_Handle doc_h = Dart_GetNativeArgument(arguments, 0);
-    if (DP_CheckError(Dart_GetPeer(doc_h, &doc)))
-    {
-        Dart_SetReturnValue(arguments, Dart_NewApiError("get native doc fail"));
-        return;
-    }
+    NativeArgPeer(doc, 0);
     int revision = FPDF_GetSecurityHandlerRevision((FPDF_DOCUMENT)doc);
     Dart_SetReturnValue(arguments, Dart_NewInteger(revision));
 }
 
 void DP_GetPageCount(Dart_NativeArguments arguments)
 {
-    void *doc = NULL;
-    Dart_Handle doc_h = Dart_GetNativeArgument(arguments, 0);
-    if (DP_CheckError(Dart_GetPeer(doc_h, &doc)))
-    {
-        Dart_SetReturnValue(arguments, Dart_NewApiError("get native doc fail"));
-        return;
-    }
+    NativeArgPeer(doc, 0);
     int count = FPDF_GetPageCount((FPDF_DOCUMENT)doc);
     Dart_SetReturnValue(arguments, Dart_NewInteger(count));
 }
 
 void DP_LoadPage(Dart_NativeArguments arguments)
 {
-    void *doc = NULL;
-    Dart_Handle doc_h = Dart_GetNativeArgument(arguments, 0);
-    if (DP_CheckError(Dart_GetPeer(doc_h, &doc)))
-    {
-        Dart_SetReturnValue(arguments, Dart_NewApiError("get native doc fail"));
-        return;
-    }
-    int64_t index = 0;
-    Dart_Handle index_h = Dart_GetNativeArgument(arguments, 1);
-    if (DP_CheckError(Dart_IntegerToInt64(index_h, &index)))
-    {
-        return;
-    }
+    NativeArgPeer(doc, 0);
+    NativeArgInt64(index, 1);
     void *page = FPDF_LoadPage((FPDF_DOCUMENT)doc, (int)index);
+    if (!page)
+    {
+        Dart_SetReturnValue(arguments, DP_HandleError(DP_LastError()));
+        return;
+    }
     Dart_Handle result = DP_NewObject();
     Dart_SetPeer(result, page);
     Dart_SetReturnValue(arguments, result);
@@ -231,83 +234,52 @@ void DP_LoadPage(Dart_NativeArguments arguments)
 
 void DP_ClosePage(Dart_NativeArguments arguments)
 {
-    void *page = NULL;
-    Dart_Handle page_h = Dart_GetNativeArgument(arguments, 0);
-    if (DP_CheckError(Dart_GetPeer(page_h, &page)))
-    {
-        Dart_SetReturnValue(arguments, Dart_NewApiError("get native page fail"));
-        return;
-    }
+    NativeArgPeer(page, 0);
     FPDF_ClosePage((FPDF_PAGE)page);
 }
 
 void DP_GetPageWidth(Dart_NativeArguments arguments)
 {
-    void *page = NULL;
-    Dart_Handle page_h = Dart_GetNativeArgument(arguments, 0);
-    if (DP_CheckError(Dart_GetPeer(page_h, &page)))
-    {
-        Dart_SetReturnValue(arguments, Dart_NewApiError("get native page fail"));
-        return;
-    }
+    NativeArgPeer(page, 0);
     double width = FPDF_GetPageWidth((FPDF_PAGE)page);
     Dart_SetReturnValue(arguments, Dart_NewDouble(width));
 }
 
 void DP_GetPageHeight(Dart_NativeArguments arguments)
 {
-    void *page = NULL;
-    Dart_Handle page_h = Dart_GetNativeArgument(arguments, 0);
-    if (DP_CheckError(Dart_GetPeer(page_h, &page)))
-    {
-        Dart_SetReturnValue(arguments, Dart_NewApiError("get native page fail"));
-        return;
-    }
+    NativeArgPeer(page, 0);
     double height = FPDF_GetPageHeight((FPDF_PAGE)page);
     Dart_SetReturnValue(arguments, Dart_NewDouble(height));
 }
 
 void DP_GetPageBoundingBox(Dart_NativeArguments arguments)
 {
-    void *page = NULL;
-    Dart_Handle page_h = Dart_GetNativeArgument(arguments, 0);
-    if (DP_CheckError(Dart_GetPeer(page_h, &page)))
-    {
-        Dart_SetReturnValue(arguments, Dart_NewApiError("get native page fail"));
-        return;
-    }
+    NativeArgPeer(page, 0);
     FS_RECTF rect;
     bool suc = FPDF_GetPageBoundingBox((FPDF_PAGE)page, &rect);
-    Dart_Handle result = Dart_NewList(5);
-    Dart_ListSetAt(result, 0, Dart_NewBoolean(suc));
-    Dart_ListSetAt(result, 1, Dart_NewDouble(rect.left));
-    Dart_ListSetAt(result, 2, Dart_NewDouble(rect.right));
-    Dart_ListSetAt(result, 3, Dart_NewDouble(rect.top));
-    Dart_ListSetAt(result, 4, Dart_NewDouble(rect.bottom));
+    Dart_Handle result = Dart_Null();
+    if (suc)
+    {
+        result = Dart_NewList(4);
+        Dart_ListSetAt(result, 0, Dart_NewDouble(rect.left));
+        Dart_ListSetAt(result, 1, Dart_NewDouble(rect.right));
+        Dart_ListSetAt(result, 2, Dart_NewDouble(rect.top));
+        Dart_ListSetAt(result, 3, Dart_NewDouble(rect.bottom));
+    }
     Dart_SetReturnValue(arguments, result);
 }
 
 void DP_Bitmap_Create(Dart_NativeArguments arguments)
 {
-    int64_t width = 0;
-    Dart_Handle width_h = Dart_GetNativeArgument(arguments, 0);
-    if (DP_CheckError(Dart_IntegerToInt64(width_h, &width)))
-    {
-        return;
-    }
-    int64_t height = 0;
-    Dart_Handle height_h = Dart_GetNativeArgument(arguments, 1);
-    if (DP_CheckError(Dart_IntegerToInt64(height_h, &height)))
-    {
-        return;
-    }
-    int64_t alpha = 0;
-    Dart_Handle alpha_h = Dart_GetNativeArgument(arguments, 2);
-    if (DP_CheckError(Dart_IntegerToInt64(alpha_h, &alpha)))
-    {
-        return;
-    }
+    NativeArgInt64(width, 0);
+    NativeArgInt64(height, 1);
+    NativeArgInt64(alpha, 2);
     void *bitmap = FPDFBitmap_Create((int)width, (int)height, (int)alpha);
+    if (!bitmap)
+    {
+        Dart_SetReturnValue(arguments, DP_HandleError(DP_LastError()));
+        return;
+    }
     Dart_Handle result = DP_NewObject();
     Dart_SetPeer(result, bitmap);
     Dart_SetReturnValue(arguments, result);
@@ -315,38 +287,17 @@ void DP_Bitmap_Create(Dart_NativeArguments arguments)
 
 void DP_Bitmap_CreateEx(Dart_NativeArguments arguments)
 {
-    int64_t width = 0;
-    Dart_Handle width_h = Dart_GetNativeArgument(arguments, 0);
-    if (DP_CheckError(Dart_IntegerToInt64(width_h, &width)))
-    {
-        return;
-    }
-    int64_t height = 0;
-    Dart_Handle height_h = Dart_GetNativeArgument(arguments, 1);
-    if (DP_CheckError(Dart_IntegerToInt64(height_h, &height)))
-    {
-        return;
-    }
-    int64_t format = 0;
-    Dart_Handle format_h = Dart_GetNativeArgument(arguments, 2);
-    if (DP_CheckError(Dart_IntegerToInt64(format_h, &format)))
-    {
-        return;
-    }
-    void *first_scan = NULL;
-    Dart_Handle first_scan_h = Dart_GetNativeArgument(arguments, 3);
-    if (DP_CheckError(Dart_GetPeer(first_scan_h, &first_scan)))
-    {
-        Dart_SetReturnValue(arguments, Dart_NewApiError("get native buffer fail"));
-        return;
-    }
-    int64_t stride = 0;
-    Dart_Handle stride_h = Dart_GetNativeArgument(arguments, 4);
-    if (DP_CheckError(Dart_IntegerToInt64(stride_h, &stride)))
-    {
-        return;
-    }
+    NativeArgInt64(width, 0);
+    NativeArgInt64(height, 1);
+    NativeArgInt64(format, 2);
+    NativeArgPeer(first_scan, 3);
+    NativeArgInt64(stride, 4);
     void *bitmap = FPDFBitmap_CreateEx((int)width, (int)height, (int)format, first_scan, (int)stride);
+    if (!bitmap)
+    {
+        Dart_SetReturnValue(arguments, DP_HandleError(DP_LastError()));
+        return;
+    }
     Dart_Handle result = DP_NewObject();
     Dart_SetPeer(result, bitmap);
     Dart_SetReturnValue(arguments, result);
@@ -354,68 +305,25 @@ void DP_Bitmap_CreateEx(Dart_NativeArguments arguments)
 
 void DP_Bitmap_GetFormat(Dart_NativeArguments arguments)
 {
-    void *bitmap = NULL;
-    Dart_Handle bitmap_h = Dart_GetNativeArgument(arguments, 0);
-    if (DP_CheckError(Dart_GetPeer(bitmap_h, &bitmap)))
-    {
-        Dart_SetReturnValue(arguments, Dart_NewApiError("get native bitmap fail"));
-        return;
-    }
+    NativeArgPeer(bitmap, 0);
     int format = FPDFBitmap_GetFormat((FPDF_BITMAP)bitmap);
     Dart_SetReturnValue(arguments, Dart_NewInteger(format));
 }
 
 void DP_Bitmap_FillRect(Dart_NativeArguments arguments)
 {
-    void *bitmap = NULL;
-    Dart_Handle bitmap_h = Dart_GetNativeArgument(arguments, 0);
-    if (DP_CheckError(Dart_GetPeer(bitmap_h, &bitmap)))
-    {
-        Dart_SetReturnValue(arguments, Dart_NewApiError("get native bitmap fail"));
-        return;
-    }
-    int64_t left = 0;
-    Dart_Handle left_h = Dart_GetNativeArgument(arguments, 1);
-    if (DP_CheckError(Dart_IntegerToInt64(left_h, &left)))
-    {
-        return;
-    }
-    int64_t top = 0;
-    Dart_Handle top_h = Dart_GetNativeArgument(arguments, 2);
-    if (DP_CheckError(Dart_IntegerToInt64(top_h, &top)))
-    {
-        return;
-    }
-    int64_t width = 0;
-    Dart_Handle width_h = Dart_GetNativeArgument(arguments, 3);
-    if (DP_CheckError(Dart_IntegerToInt64(width_h, &width)))
-    {
-        return;
-    }
-    int64_t height = 0;
-    Dart_Handle height_h = Dart_GetNativeArgument(arguments, 4);
-    if (DP_CheckError(Dart_IntegerToInt64(height_h, &height)))
-    {
-        return;
-    }
-    uint64_t color = 0;
-    Dart_Handle color_h = Dart_GetNativeArgument(arguments, 5);
-    if (DP_CheckError(Dart_IntegerToUint64(color_h, &color)))
-    {
-        return;
-    }
+    NativeArgPeer(bitmap, 0);
+    NativeArgInt64(left, 1);
+    NativeArgInt64(top, 2);
+    NativeArgInt64(width, 3);
+    NativeArgInt64(height, 4);
+    NativeArgInt64(color, 5);
     FPDFBitmap_FillRect((FPDF_BITMAP)bitmap, (int)left, (int)top, (int)width, (int)height, (FPDF_DWORD)color);
 }
 
 void DP_Bitmap_GetBuffer(Dart_NativeArguments arguments)
 {
-    void *bitmap = NULL;
-    Dart_Handle bitmap_h = Dart_GetNativeArgument(arguments, 0);
-    if (DP_CheckError(Dart_GetPeer(bitmap_h, &bitmap)))
-    {
-        Dart_SetReturnValue(arguments, Dart_NewApiError("get native bitmap fail"));
-        return;
-    }
+    NativeArgPeer(bitmap, 0);
     void *buffer = FPDFBitmap_GetBuffer((FPDF_BITMAP)bitmap);
     Dart_Handle result = DP_NewObject();
     Dart_SetPeer(result, buffer);
@@ -424,108 +332,334 @@ void DP_Bitmap_GetBuffer(Dart_NativeArguments arguments)
 
 void DP_Bitmap_GetWidth(Dart_NativeArguments arguments)
 {
-    void *bitmap = NULL;
-    Dart_Handle bitmap_h = Dart_GetNativeArgument(arguments, 0);
-    if (DP_CheckError(Dart_GetPeer(bitmap_h, &bitmap)))
-    {
-        Dart_SetReturnValue(arguments, Dart_NewApiError("get native bitmap fail"));
-        return;
-    }
+    NativeArgPeer(bitmap, 0);
     int width = FPDFBitmap_GetWidth((FPDF_BITMAP)bitmap);
     Dart_SetReturnValue(arguments, Dart_NewInteger(width));
 }
 
 void DP_Bitmap_GetHeight(Dart_NativeArguments arguments)
 {
-    void *bitmap = NULL;
-    Dart_Handle bitmap_h = Dart_GetNativeArgument(arguments, 0);
-    if (DP_CheckError(Dart_GetPeer(bitmap_h, &bitmap)))
-    {
-        Dart_SetReturnValue(arguments, Dart_NewApiError("get native bitmap fail"));
-        return;
-    }
+    NativeArgPeer(bitmap, 0);
     int height = FPDFBitmap_GetHeight((FPDF_BITMAP)bitmap);
     Dart_SetReturnValue(arguments, Dart_NewInteger(height));
 }
 
 void DP_Bitmap_GetStride(Dart_NativeArguments arguments)
 {
-    void *bitmap = NULL;
-    Dart_Handle bitmap_h = Dart_GetNativeArgument(arguments, 0);
-    if (DP_CheckError(Dart_GetPeer(bitmap_h, &bitmap)))
-    {
-        Dart_SetReturnValue(arguments, Dart_NewApiError("get native bitmap fail"));
-        return;
-    }
+    NativeArgPeer(bitmap, 0);
     int stride = FPDFBitmap_GetStride((FPDF_BITMAP)bitmap);
     Dart_SetReturnValue(arguments, Dart_NewInteger(stride));
 }
 
 void DP_Bitmap_Destroy(Dart_NativeArguments arguments)
 {
-    void *bitmap = NULL;
-    Dart_Handle bitmap_h = Dart_GetNativeArgument(arguments, 0);
-    if (DP_CheckError(Dart_GetPeer(bitmap_h, &bitmap)))
-    {
-        Dart_SetReturnValue(arguments, Dart_NewApiError("get native bitmap fail"));
-        return;
-    }
+    NativeArgPeer(bitmap, 0);
     FPDFBitmap_Destroy((FPDF_BITMAP)bitmap);
 }
 
 void DP_RenderPageBitmap(Dart_NativeArguments arguments)
 {
-    void *bitmap = NULL;
-    Dart_Handle bitmap_h = Dart_GetNativeArgument(arguments, 0);
-    if (DP_CheckError(Dart_GetPeer(bitmap_h, &bitmap)))
-    {
-        Dart_SetReturnValue(arguments, Dart_NewApiError("get native bitmap fail"));
-        return;
-    }
-    void *page = NULL;
-    Dart_Handle page_h = Dart_GetNativeArgument(arguments, 1);
-    if (DP_CheckError(Dart_GetPeer(page_h, &page)))
-    {
-        Dart_SetReturnValue(arguments, Dart_NewApiError("get native page fail"));
-        return;
-    }
-    int64_t start_x = 0;
-    Dart_Handle start_x_h = Dart_GetNativeArgument(arguments, 2);
-    if (DP_CheckError(Dart_IntegerToInt64(start_x_h, &start_x)))
-    {
-        return;
-    }
-    int64_t start_y = 0;
-    Dart_Handle start_y_h = Dart_GetNativeArgument(arguments, 3);
-    if (DP_CheckError(Dart_IntegerToInt64(start_y_h, &start_y)))
-    {
-        return;
-    }
-    int64_t size_x = 0;
-    Dart_Handle size_x_h = Dart_GetNativeArgument(arguments, 4);
-    if (DP_CheckError(Dart_IntegerToInt64(size_x_h, &size_x)))
-    {
-        return;
-    }
-    int64_t size_y = 0;
-    Dart_Handle size_y_h = Dart_GetNativeArgument(arguments, 5);
-    if (DP_CheckError(Dart_IntegerToInt64(size_y_h, &size_y)))
-    {
-        return;
-    }
-    int64_t rotate = 0;
-    Dart_Handle rotate_h = Dart_GetNativeArgument(arguments, 6);
-    if (DP_CheckError(Dart_IntegerToInt64(rotate_h, &rotate)))
-    {
-        return;
-    }
-    int64_t flags = 0;
-    Dart_Handle flags_h = Dart_GetNativeArgument(arguments, 7);
-    if (DP_CheckError(Dart_IntegerToInt64(flags_h, &flags)))
-    {
-        return;
-    }
+    NativeArgPeer(bitmap, 0);
+    NativeArgPeer(page, 1);
+    NativeArgInt64(start_x, 2);
+    NativeArgInt64(start_y, 3);
+    NativeArgInt64(size_x, 4);
+    NativeArgInt64(size_y, 5);
+    NativeArgInt64(rotate, 6);
+    NativeArgInt64(flags, 7);
     FPDF_RenderPageBitmap((FPDF_BITMAP)bitmap, (FPDF_PAGE)page, start_x, start_y, size_x, size_y, rotate, flags);
+}
+
+void DP_GetThumbnailAsBitmap(Dart_NativeArguments arguments)
+{
+    NativeArgPeer(page, 0);
+    void *bitmap = FPDFPage_GetThumbnailAsBitmap((FPDF_PAGE)page);
+    Dart_Handle result = Dart_Null();
+    if (bitmap)
+    {
+        result = DP_NewObject();
+        Dart_SetPeer(result, bitmap);
+    }
+    Dart_SetReturnValue(arguments, result);
+}
+
+void DP_Text_LoadPage(Dart_NativeArguments arguments)
+{
+    NativeArgPeer(page, 0);
+    void *text = FPDFText_LoadPage((FPDF_PAGE)page);
+    if (!text)
+    {
+        Dart_SetReturnValue(arguments, DP_HandleError(DP_LastError()));
+        return;
+    }
+    Dart_Handle result = DP_NewObject();
+    Dart_SetPeer(result, text);
+    Dart_SetReturnValue(arguments, result);
+}
+
+void DP_Text_ClosePage(Dart_NativeArguments arguments)
+{
+    NativeArgPeer(text, 0);
+    FPDFText_ClosePage((FPDF_TEXTPAGE)text);
+}
+
+void DP_Text_CountChars(Dart_NativeArguments arguments)
+{
+    NativeArgPeer(text, 0);
+    int count = FPDFText_CountChars((FPDF_TEXTPAGE)text);
+    Dart_SetReturnValue(arguments, Dart_NewInteger(count));
+}
+
+void DP_Text_GetUnicode(Dart_NativeArguments arguments)
+{
+    NativeArgPeer(text, 0);
+    NativeArgInt64(index, 1);
+    unsigned int unicode = FPDFText_GetUnicode((FPDF_TEXTPAGE)text, (int)index);
+    Dart_SetReturnValue(arguments, Dart_NewIntegerFromUint64(unicode));
+}
+
+void DP_Text_GetFontSize(Dart_NativeArguments arguments)
+{
+    NativeArgPeer(text, 0);
+    NativeArgInt64(index, 1);
+    double fontSize = FPDFText_GetFontSize((FPDF_TEXTPAGE)text, (int)index);
+    Dart_SetReturnValue(arguments, Dart_NewDouble(fontSize));
+}
+
+void DP_Text_GetFontInfo(Dart_NativeArguments arguments)
+{
+    NativeArgPeer(text, 0);
+    NativeArgInt64(index, 1);
+    int flags;
+    char buffer[1025];
+    unsigned long l = FPDFText_GetFontInfo((FPDF_TEXTPAGE)text, (int)index, buffer, 1024, &flags);
+    buffer[l] = 0;
+    Dart_SetReturnValue(arguments, Dart_NewStringFromCString(buffer));
+}
+
+void DP_Text_GetCharAngle(Dart_NativeArguments arguments)
+{
+    NativeArgPeer(text, 0);
+    NativeArgInt64(index, 1);
+    double angle = FPDFText_GetCharAngle((FPDF_TEXTPAGE)text, (int)index);
+    Dart_SetReturnValue(arguments, Dart_NewDouble(angle));
+}
+
+void DP_Text_GetCharBox(Dart_NativeArguments arguments)
+{
+    NativeArgPeer(text, 0);
+    NativeArgInt64(index, 1);
+    double left, right, bottom, top;
+    FPDF_BOOL suc = FPDFText_GetCharBox((FPDF_TEXTPAGE)text, (int)index, &left, &right, &bottom, &top);
+    Dart_Handle result = Dart_Null();
+    if (suc)
+    {
+        result = Dart_NewList(4);
+        Dart_ListSetAt(result, 0, Dart_NewDouble(left));
+        Dart_ListSetAt(result, 1, Dart_NewDouble(right));
+        Dart_ListSetAt(result, 2, Dart_NewDouble(top));
+        Dart_ListSetAt(result, 3, Dart_NewDouble(bottom));
+    }
+    Dart_SetReturnValue(arguments, result);
+}
+
+void DP_Text_GetCharOrigin(Dart_NativeArguments arguments)
+{
+    NativeArgPeer(text, 0);
+    NativeArgInt64(index, 1);
+    double x, y;
+    FPDF_BOOL suc = FPDFText_GetCharOrigin((FPDF_TEXTPAGE)text, (int)index, &x, &y);
+    Dart_Handle result = Dart_Null();
+    if (suc)
+    {
+        result = Dart_NewList(2);
+        Dart_ListSetAt(result, 0, Dart_NewDouble(x));
+        Dart_ListSetAt(result, 1, Dart_NewDouble(y));
+    }
+    Dart_SetReturnValue(arguments, result);
+}
+
+void DP_Text_GetCharIndexAtPos(Dart_NativeArguments arguments)
+{
+    NativeArgPeer(text, 0);
+    NativeArgDouble(x, 1);
+    NativeArgDouble(y, 2);
+    NativeArgDouble(xTolerance, 3);
+    NativeArgDouble(yTolerance, 4);
+    int index = FPDFText_GetCharIndexAtPos((FPDF_TEXTPAGE)text, x, y, xTolerance, yTolerance);
+    Dart_SetReturnValue(arguments, Dart_NewInteger(index));
+}
+
+void DP_Text_GetText(Dart_NativeArguments arguments)
+{
+    NativeArgPeer(text, 0);
+    NativeArgInt64(start_index, 1);
+    NativeArgInt64(count, 2);
+    uint16_t buffer[count + 1];
+    int len = FPDFText_GetText((FPDF_TEXTPAGE)text, (int)start_index, (int)count, (unsigned short *)buffer);
+    Dart_SetReturnValue(arguments, Dart_NewStringFromUTF16(buffer, len - 1));
+}
+
+void DP_Text_CountRects(Dart_NativeArguments arguments)
+{
+    NativeArgPeer(text, 0);
+    NativeArgInt64(start_index, 1);
+    NativeArgInt64(count, 2);
+    int len = FPDFText_CountRects((FPDF_TEXTPAGE)text, (int)start_index, (int)count);
+    Dart_SetReturnValue(arguments, Dart_NewInteger(len));
+}
+
+void DP_Text_GetRect(Dart_NativeArguments arguments)
+{
+    NativeArgPeer(text, 0);
+    NativeArgInt64(rect_index, 1);
+    double left, right, bottom, top;
+    FPDF_BOOL suc = FPDFText_GetRect((FPDF_TEXTPAGE)text, (int)rect_index, &left, &right, &bottom, &top);
+    Dart_Handle result = Dart_Null();
+    if (suc)
+    {
+        result = Dart_NewList(4);
+        Dart_ListSetAt(result, 0, Dart_NewDouble(left));
+        Dart_ListSetAt(result, 1, Dart_NewDouble(right));
+        Dart_ListSetAt(result, 2, Dart_NewDouble(top));
+        Dart_ListSetAt(result, 3, Dart_NewDouble(bottom));
+    }
+    Dart_SetReturnValue(arguments, result);
+}
+
+void DP_Text_GetBoundedText(Dart_NativeArguments arguments)
+{
+    NativeArgPeer(text, 0);
+    NativeArgDouble(left, 1);
+    NativeArgDouble(right, 2);
+    NativeArgDouble(bottom, 3);
+    NativeArgDouble(top, 4);
+    uint16_t buffer[1024];
+    int len = FPDFText_GetBoundedText((FPDF_TEXTPAGE)text, left, right, bottom, top, (unsigned short *)buffer, 1024);
+    Dart_SetReturnValue(arguments, Dart_NewStringFromUTF16(buffer, len - 1));
+}
+
+void DP_Text_FindStart(Dart_NativeArguments arguments)
+{
+    NativeArgPeer(text, 0);
+    NativeArgUTF16String(findwhat, 1);
+    NativeArgInt64(flags, 2);
+    NativeArgInt64(start_index, 3);
+    void *handle = FPDFText_FindStart((FPDF_TEXTPAGE)text, (FPDF_WIDESTRING)findwhat, flags, start_index);
+    Dart_Handle result = Dart_Null();
+    if (handle)
+    {
+        result = DP_NewObject();
+        Dart_SetPeer(result, handle);
+    }
+    Dart_SetReturnValue(arguments, result);
+}
+
+void DP_Text_FindNext(Dart_NativeArguments arguments)
+{
+    NativeArgPeer(handle, 0);
+    bool having = FPDFText_FindNext((FPDF_SCHHANDLE)handle);
+    Dart_SetReturnValue(arguments, Dart_NewBoolean(having));
+}
+
+void DP_Text_FindPrev(Dart_NativeArguments arguments)
+{
+    NativeArgPeer(handle, 0);
+    bool having = FPDFText_FindPrev((FPDF_SCHHANDLE)handle);
+    Dart_SetReturnValue(arguments, Dart_NewBoolean(having));
+}
+
+void DP_Text_GetSchResultIndex(Dart_NativeArguments arguments)
+{
+    NativeArgPeer(handle, 0);
+    int index = FPDFText_GetSchResultIndex((FPDF_SCHHANDLE)handle);
+    Dart_SetReturnValue(arguments, Dart_NewInteger(index));
+}
+
+void DP_Text_GetSchCount(Dart_NativeArguments arguments)
+{
+    NativeArgPeer(handle, 0);
+    int count = FPDFText_GetSchCount((FPDF_SCHHANDLE)handle);
+    Dart_SetReturnValue(arguments, Dart_NewInteger(count));
+}
+
+void DP_Text_FindClose(Dart_NativeArguments arguments)
+{
+    NativeArgPeer(handle, 0);
+    FPDFText_FindClose((FPDF_SCHHANDLE)handle);
+}
+
+void DP_Bookmark_GetFirstChild(Dart_NativeArguments arguments)
+{
+    NativeArgPeer(doc, 0);
+    NativeArgPeerOptional(bookmark, 1);
+    FPDF_BOOKMARK child = FPDFBookmark_GetFirstChild((FPDF_DOCUMENT)doc, (FPDF_BOOKMARK)bookmark);
+    Dart_Handle result = Dart_Null();
+    if (child)
+    {
+        result = DP_NewObject();
+        Dart_SetPeer(result, child);
+    }
+    Dart_SetReturnValue(arguments, result);
+}
+
+void DP_Bookmark_GetNextSibling(Dart_NativeArguments arguments)
+{
+    NativeArgPeer(doc, 0);
+    NativeArgPeer(bookmark, 1);
+    FPDF_BOOKMARK next = FPDFBookmark_GetNextSibling((FPDF_DOCUMENT)doc, (FPDF_BOOKMARK)bookmark);
+    Dart_Handle result = Dart_Null();
+    if (next)
+    {
+        result = DP_NewObject();
+        Dart_SetPeer(result, next);
+    }
+    Dart_SetReturnValue(arguments, result);
+}
+
+void DP_Bookmark_GetTitle(Dart_NativeArguments arguments)
+{
+    NativeArgPeer(bookmark, 0);
+    char buffer[1025];
+    unsigned long len = FPDFBookmark_GetTitle((FPDF_BOOKMARK)bookmark, buffer, 1024);
+    buffer[len] = 0;
+    Dart_SetReturnValue(arguments, Dart_NewStringFromCString(buffer));
+}
+
+void DP_Bookmark_Find(Dart_NativeArguments arguments)
+{
+    NativeArgPeer(doc, 0);
+    NativeArgCString(title, 1);
+    FPDF_BOOKMARK bookmark = FPDFBookmark_Find((FPDF_DOCUMENT)doc, (FPDF_WIDESTRING)title);
+    Dart_Handle result = Dart_Null();
+    if (bookmark)
+    {
+        result = DP_NewObject();
+        Dart_SetPeer(result, bookmark);
+    }
+    Dart_SetReturnValue(arguments, result);
+}
+
+void DP_Bookmark_GetDest(Dart_NativeArguments arguments)
+{
+    NativeArgPeer(doc, 0);
+    NativeArgPeer(bookmark, 0);
+    FPDF_DEST dest = FPDFBookmark_GetDest((FPDF_DOCUMENT)doc, (FPDF_BOOKMARK)bookmark);
+    Dart_Handle result = Dart_Null();
+    if (dest)
+    {
+        result = DP_NewObject();
+        Dart_SetPeer(result, dest);
+    }
+    Dart_SetReturnValue(arguments, result);
+}
+
+void DP_Dest_GetDestPageIndex(Dart_NativeArguments arguments)
+{
+    NativeArgPeer(doc, 0);
+    NativeArgPeer(dest, 0);
+    int index = FPDFDest_GetDestPageIndex((FPDF_DOCUMENT)doc, (FPDF_DEST)dest);
+    Dart_SetReturnValue(arguments, Dart_NewInteger(index));
 }
 
 Dart_NativeFunction DP_ResolveName(Dart_Handle name, int argc, bool *auto_setup_scope)
@@ -588,5 +722,59 @@ Dart_NativeFunction DP_ResolveName(Dart_Handle name, int argc, bool *auto_setup_
         result = DP_Bitmap_Destroy;
     else if (strcmp("DP_RenderPageBitmap", cname) == 0)
         result = DP_RenderPageBitmap;
+    else if (strcmp("DP_GetThumbnailAsBitmap", cname) == 0)
+        result = DP_GetThumbnailAsBitmap;
+    else if (strcmp("DP_Text_LoadPage", cname) == 0)
+        result = DP_Text_LoadPage;
+    else if (strcmp("DP_Text_ClosePage", cname) == 0)
+        result = DP_Text_ClosePage;
+    else if (strcmp("DP_Text_CountChars", cname) == 0)
+        result = DP_Text_CountChars;
+    else if (strcmp("DP_Text_GetUnicode", cname) == 0)
+        result = DP_Text_GetUnicode;
+    else if (strcmp("DP_Text_GetFontSize", cname) == 0)
+        result = DP_Text_GetFontSize;
+    else if (strcmp("DP_Text_GetFontInfo", cname) == 0)
+        result = DP_Text_GetFontInfo;
+    else if (strcmp("DP_Text_GetCharAngle", cname) == 0)
+        result = DP_Text_GetCharAngle;
+    else if (strcmp("DP_Text_GetCharBox", cname) == 0)
+        result = DP_Text_GetCharBox;
+    else if (strcmp("DP_Text_GetCharOrigin", cname) == 0)
+        result = DP_Text_GetCharOrigin;
+    else if (strcmp("DP_Text_GetCharIndexAtPos", cname) == 0)
+        result = DP_Text_GetCharIndexAtPos;
+    else if (strcmp("DP_Text_GetText", cname) == 0)
+        result = DP_Text_GetText;
+    else if (strcmp("DP_Text_CountRects", cname) == 0)
+        result = DP_Text_CountRects;
+    else if (strcmp("DP_Text_GetRect", cname) == 0)
+        result = DP_Text_GetRect;
+    else if (strcmp("DP_Text_GetBoundedText", cname) == 0)
+        result = DP_Text_GetBoundedText;
+    else if (strcmp("DP_Text_FindStart", cname) == 0)
+        result = DP_Text_FindStart;
+    else if (strcmp("DP_Text_FindNext", cname) == 0)
+        result = DP_Text_FindNext;
+    else if (strcmp("DP_Text_FindPrev", cname) == 0)
+        result = DP_Text_FindPrev;
+    else if (strcmp("DP_Text_GetSchResultIndex", cname) == 0)
+        result = DP_Text_GetSchResultIndex;
+    else if (strcmp("DP_Text_GetSchCount", cname) == 0)
+        result = DP_Text_GetSchCount;
+    else if (strcmp("DP_Text_FindClose", cname) == 0)
+        result = DP_Text_FindClose;
+    else if (strcmp("DP_Bookmark_GetFirstChild", cname) == 0)
+        result = DP_Bookmark_GetFirstChild;
+    else if (strcmp("DP_Bookmark_GetNextSibling", cname) == 0)
+        result = DP_Bookmark_GetNextSibling;
+    else if (strcmp("DP_Bookmark_GetTitle", cname) == 0)
+        result = DP_Bookmark_GetTitle;
+    else if (strcmp("DP_Bookmark_Find", cname) == 0)
+        result = DP_Bookmark_Find;
+    else if (strcmp("DP_Bookmark_GetDest", cname) == 0)
+        result = DP_Bookmark_GetDest;
+    else if (strcmp("DP_Dest_GetDestPageIndex", cname) == 0)
+        result = DP_Dest_GetDestPageIndex;
     return result;
 }

@@ -12,3 +12,5 @@ test/.test_coverage.dart
 coverage_badge.svg
 dartsdk-macos-x64-release.zip
 pubspec.lock
+default.profraw
+default.profdata
