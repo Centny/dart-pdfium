@@ -80,7 +80,7 @@ void testAll(String filepath) {
       print("PageText test done");
     }
     {
-      Bitmap thumbnail = page.thumbnail;
+      Bitmap thumbnail = page.loadThumbnail();
       if (thumbnail != null) {
         thumbnail.destory();
       }
@@ -89,7 +89,7 @@ void testAll(String filepath) {
     print("Page test done");
   }
   {
-    //test bookmark
+    //test load bookmark
     Bookmark bookmark = doc.loadBookmark();
     print("Bookmark:${bookmark}");
     if (bookmark != null) {
@@ -99,19 +99,18 @@ void testAll(String filepath) {
       print("Bookmark current pageIndex:${bookmark.pageIndex}");
       Bookmark next = bookmark;
       for (var i = 0; i < 10; i++) {
-        next = next.next;
         if (next != null) {
           print("Bookmark current title:${next.title}");
           print("Bookmark current pageIndex:${next.pageIndex}");
+          Bookmark firstChild = next.firstChild;
+          if (firstChild != null) {
+            print("Bookmark current title:${firstChild.title}");
+            print("Bookmark current pageIndex:${firstChild.pageIndex}");
+          }
+          next = next.next;
         } else {
           break;
         }
-      }
-      //
-      Bookmark firstChild = bookmark.firstChild;
-      if (firstChild != null) {
-        print("Bookmark current title:${firstChild.title}");
-        print("Bookmark current pageIndex:${firstChild.pageIndex}");
       }
     }
     print("Bookmark test done");
@@ -135,6 +134,13 @@ void main() {
       var filepath = "testing/bookmarks.pdf";
       testAll(filepath);
       print("testing ${filepath} done\n\n\n\n");
+      DestroyLibrary();
+    });
+    test('Test Bookmarks 1', () {
+      var filepath = "testing/bookmarks1.pdf";
+      testAll(filepath);
+      print("testing ${filepath} done\n\n\n\n");
+      DestroyLibrary();
     });
 
     test('Test Error', () {

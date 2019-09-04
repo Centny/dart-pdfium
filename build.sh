@@ -9,6 +9,7 @@ make install
 cd ../
 
 pub run test_coverage test/
+# pub run test test/
 
 llvm-profdata merge -sparse default.profraw -o default.profdata
 llvm-cov show lib/libdart_pdfium.dylib -instr-profile=default.profdata src/*.cc -path-equivalence -use-color --format html > coverage/coverage.html

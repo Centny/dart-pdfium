@@ -173,10 +173,12 @@ void DP_InitLibrary(Dart_NativeArguments arguments)
 void DP_InitLibraryWithConfig(Dart_NativeArguments arguments)
 {
     NativeArgInt64(version, 0);
-    NativeArgCString(font, 1, 1);
+    NativeArgCString(font, 1, 0);
     FPDF_LIBRARY_CONFIG config;
     config.version = (int)version;
     config.m_pUserFontPaths = &font;
+    config.m_pIsolate = nullptr;
+    config.m_v8EmbedderSlot = 0;
     FPDF_InitLibraryWithConfig(&config);
 }
 
@@ -300,22 +302,22 @@ void DP_Bitmap_Create(Dart_NativeArguments arguments)
     Dart_SetReturnValue(arguments, result);
 }
 
-void DP_Bitmap_CreateEx(Dart_NativeArguments arguments)
-{
-    NativeArgInt64(width, 0);
-    NativeArgInt64(height, 1);
-    NativeArgInt64(format, 2);
-    NativeArgPeer(first_scan, 3, 1);
-    NativeArgInt64(stride, 4);
-    Dart_Handle result = Dart_Null();
-    void *bitmap = FPDFBitmap_CreateEx((int)width, (int)height, (int)format, first_scan, (int)stride);
-    if (bitmap)
-    {
-        result = DP_NewObject();
-        Dart_SetPeer(result, bitmap);
-    }
-    Dart_SetReturnValue(arguments, result);
-}
+// void DP_Bitmap_CreateEx(Dart_NativeArguments arguments)
+// {
+//     NativeArgInt64(width, 0);
+//     NativeArgInt64(height, 1);
+//     NativeArgInt64(format, 2);
+//     NativeArgPeer(first_scan, 3, 1);
+//     NativeArgInt64(stride, 4);
+//     Dart_Handle result = Dart_Null();
+//     void *bitmap = FPDFBitmap_CreateEx((int)width, (int)height, (int)format, first_scan, (int)stride);
+//     if (bitmap)
+//     {
+//         result = DP_NewObject();
+//         Dart_SetPeer(result, bitmap);
+//     }
+//     Dart_SetReturnValue(arguments, result);
+// }
 
 void DP_Bitmap_GetFormat(Dart_NativeArguments arguments)
 {
@@ -633,30 +635,29 @@ void DP_Bookmark_GetNextSibling(Dart_NativeArguments arguments)
 void DP_Bookmark_GetTitle(Dart_NativeArguments arguments)
 {
     NativeArgPeer(bookmark, 0, 1);
-    char buffer[1025];
+    uint16_t buffer[1024];
     unsigned long len = FPDFBookmark_GetTitle((FPDF_BOOKMARK)bookmark, buffer, 1024);
-    buffer[len] = 0;
-    Dart_SetReturnValue(arguments, Dart_NewStringFromCString(buffer));
+    Dart_SetReturnValue(arguments, Dart_NewStringFromUTF16(buffer, len / 2 - 1));
 }
 
-void DP_Bookmark_Find(Dart_NativeArguments arguments)
-{
-    NativeArgPeer(doc, 0, 1);
-    NativeArgCString(title, 1, 1);
-    FPDF_BOOKMARK bookmark = FPDFBookmark_Find((FPDF_DOCUMENT)doc, (FPDF_WIDESTRING)title);
-    Dart_Handle result = Dart_Null();
-    if (bookmark)
-    {
-        result = DP_NewObject();
-        Dart_SetPeer(result, bookmark);
-    }
-    Dart_SetReturnValue(arguments, result);
-}
+// void DP_Bookmark_Find(Dart_NativeArguments arguments)
+// {
+//     NativeArgPeer(doc, 0, 1);
+//     NativeArgUTF16String(title, 1);
+//     FPDF_BOOKMARK bookmark = FPDFBookmark_Find((FPDF_DOCUMENT)doc, (FPDF_WIDESTRING)title);
+//     Dart_Handle result = Dart_Null();
+//     if (bookmark)
+//     {
+//         result = DP_NewObject();
+//         Dart_SetPeer(result, bookmark);
+//     }
+//     Dart_SetReturnValue(arguments, result);
+// }
 
 void DP_Bookmark_GetDest(Dart_NativeArguments arguments)
 {
     NativeArgPeer(doc, 0, 1);
-    NativeArgPeer(bookmark, 0, 1);
+    NativeArgPeer(bookmark, 1, 1);
     FPDF_DEST dest = FPDFBookmark_GetDest((FPDF_DOCUMENT)doc, (FPDF_BOOKMARK)bookmark);
     Dart_Handle result = Dart_Null();
     if (dest)
@@ -670,7 +671,7 @@ void DP_Bookmark_GetDest(Dart_NativeArguments arguments)
 void DP_Dest_GetDestPageIndex(Dart_NativeArguments arguments)
 {
     NativeArgPeer(doc, 0, 1);
-    NativeArgPeer(dest, 0, 1);
+    NativeArgPeer(dest, 1, 1);
     int index = FPDFDest_GetDestPageIndex((FPDF_DOCUMENT)doc, (FPDF_DEST)dest);
     Dart_SetReturnValue(arguments, Dart_NewInteger(index));
 }
@@ -719,8 +720,8 @@ Dart_NativeFunction DP_ResolveName(Dart_Handle name, int argc, bool *auto_setup_
         result = DP_GetPageBoundingBox;
     else if (strcmp("DP_Bitmap_Create", cname) == 0)
         result = DP_Bitmap_Create;
-    else if (strcmp("DP_Bitmap_CreateEx", cname) == 0)
-        result = DP_Bitmap_CreateEx;
+    // else if (strcmp("DP_Bitmap_CreateEx", cname) == 0)
+    //     result = DP_Bitmap_CreateEx;
     else if (strcmp("DP_Bitmap_GetFormat", cname) == 0)
         result = DP_Bitmap_GetFormat;
     else if (strcmp("DP_Bitmap_FillRect", cname) == 0)
@@ -785,8 +786,8 @@ Dart_NativeFunction DP_ResolveName(Dart_Handle name, int argc, bool *auto_setup_
         result = DP_Bookmark_GetNextSibling;
     else if (strcmp("DP_Bookmark_GetTitle", cname) == 0)
         result = DP_Bookmark_GetTitle;
-    else if (strcmp("DP_Bookmark_Find", cname) == 0)
-        result = DP_Bookmark_Find;
+    // else if (strcmp("DP_Bookmark_Find", cname) == 0)
+    //     result = DP_Bookmark_Find;
     else if (strcmp("DP_Bookmark_GetDest", cname) == 0)
         result = DP_Bookmark_GetDest;
     else if (strcmp("DP_Dest_GetDestPageIndex", cname) == 0)

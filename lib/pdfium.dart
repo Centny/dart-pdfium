@@ -18,7 +18,7 @@ double DP_GetPageWidth(Object page) native "DP_GetPageWidth";
 double DP_GetPageHeight(Object page) native "DP_GetPageHeight";
 List DP_GetPageBoundingBox(Object page) native "DP_GetPageBoundingBox";
 Object DP_Bitmap_Create(int width, height, alpha) native "DP_Bitmap_Create";
-Object DP_Bitmap_CreateEx(int width, height, format, Object firstScan, int stride) native "DP_Bitmap_CreateEx";
+// Object DP_Bitmap_CreateEx(int width, height, format, Object firstScan, int stride) native "DP_Bitmap_CreateEx";
 int DP_Bitmap_GetFormat(Object bitmap) native "DP_Bitmap_GetFormat";
 void DP_Bitmap_FillRect(Object bitmap, int left, top, width, height, color) native "DP_Bitmap_FillRect";
 Object DP_Bitmap_GetBuffer(Object bitmap) native "DP_Bitmap_GetBuffer";
@@ -51,7 +51,7 @@ void DP_Text_FindClose(Object handle) native "DP_Text_FindClose";
 Object DP_Bookmark_GetFirstChild(Object doc, bookmark) native "DP_Bookmark_GetFirstChild";
 Object DP_Bookmark_GetNextSibling(Object doc, bookmark) native "DP_Bookmark_GetNextSibling";
 String DP_Bookmark_GetTitle(Object bookmark) native "DP_Bookmark_GetTitle";
-Object DP_Bookmark_Find(Object bookmark, String title) native "DP_Bookmark_Find";
+// Object DP_Bookmark_Find(Object bookmark, String title) native "DP_Bookmark_Find";
 Object DP_Bookmark_GetDest(Object doc, bookmark) native "DP_Bookmark_GetDest";
 int DP_Dest_GetDestPageIndex(Object doc, dest) native "DP_Dest_GetDestPageIndex";
 
@@ -98,7 +98,7 @@ class Bookmark {
     if (d == null) {
       return -1;
     }
-    return DP_Dest_GetDestPageIndex(doc, d);
+    return DP_Dest_GetDestPageIndex(doc._doc, d);
   }
 
   String toString() => "Bookmark(${_doc._filepath})";
@@ -216,13 +216,15 @@ const bitmapFormatBGRA = 4;
 
 class Bitmap {
   Object _bitmap;
-  Bitmap(int width, height, {int alpha = 1, int format = 0, Object firstScan = null, int stride = 0}) {
-    if (firstScan == null) {
-      _bitmap = DP_Bitmap_Create(width, height, alpha);
-    } else {
-      _bitmap = DP_Bitmap_CreateEx(width, height, format, firstScan, stride);
-    }
+  Bitmap(int width, height, {int alpha = 1}) {
+    // Bitmap(int width, height, {int alpha = 1, int format = 0, Object firstScan = null, int stride = 0}) {
+    // if (firstScan == null) {
+    _bitmap = DP_Bitmap_Create(width, height, alpha);
+    // } else {
+    // _bitmap = DP_Bitmap_CreateEx(width, height, format, firstScan, stride);
+    // }
   }
+  Bitmap.fromNative(this._bitmap);
   Object get nativeObject => _bitmap;
   int get format => DP_Bitmap_GetFormat(_bitmap);
   Object get buffer => DP_Bitmap_GetBuffer(_bitmap);
@@ -255,7 +257,13 @@ class Page {
     return rect;
   }
 
-  Bitmap get thumbnail => DP_GetThumbnailAsBitmap(_page);
+  Bitmap loadThumbnail() {
+    Object b = DP_GetThumbnailAsBitmap(_page);
+    if (b == null) {
+      return null;
+    }
+    return Bitmap.fromNative(b);
+  }
 
   PageText loadText() {
     Object t = DP_Text_LoadPage(_page);
