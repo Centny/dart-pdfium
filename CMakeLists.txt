@@ -5,10 +5,16 @@ project(dart_pdfium)
 
 set(CMAKE_MACOSX_RPATH 1)
 
+set(DART_SDK_PATH dart-sdk CACHE STRING "The dart sdk path")
+set(PDFIUM_PATH pdfium CACHE STRING "The pdfium path")
+
+message("Using DART_SDK_PATH:" ${DART_SDK_PATH})
+message("Using PDFIUM_PATH:" ${PDFIUM_PATH})
+
 add_library(dart_pdfium SHARED lib/pdfium.cc)
 
-target_include_directories(dart_pdfium PRIVATE dart-sdk/include/ pdfium/public/)
-target_link_directories(dart_pdfium PRIVATE pdfium/out/obj/)
+target_include_directories(dart_pdfium PRIVATE ${DART_SDK_PATH}/include/ ${PDFIUM_PATH}/public/)
+target_link_directories(dart_pdfium PRIVATE ${PDFIUM_PATH}/out/obj/)
 
 target_compile_definitions(dart_pdfium PRIVATE DART_SHARED_LIB=1)
 
