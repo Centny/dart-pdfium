@@ -5,7 +5,7 @@ project(dart_pdfium)
 
 set(CMAKE_MACOSX_RPATH 1)
 
-add_library(dart_pdfium SHARED src/pdfium.cc)
+add_library(dart_pdfium SHARED lib/pdfium.cc)
 
 target_include_directories(dart_pdfium PRIVATE dart-sdk/include/ pdfium/public/)
 target_link_directories(dart_pdfium PRIVATE pdfium/out/obj/)

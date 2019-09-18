@@ -1,7 +1,6 @@
-library pdfium;
+part of dart.pdfium;
 
-import 'dart-ext:dart_pdfium';
-
+// import 'dart-ext:dart_pdfium';
 void InitLibrary() native "DP_InitLibrary";
 void InitLibraryWithConfig(int version, String font) native "DP_InitLibraryWithConfig";
 void DestroyLibrary() native "DP_DestroyLibrary";

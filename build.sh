@@ -12,7 +12,7 @@ pub run test_coverage test/
 # pub run test test/
 
 llvm-profdata merge -sparse default.profraw -o default.profdata
-llvm-cov show lib/libdart_pdfium.dylib -instr-profile=default.profdata src/*.cc -path-equivalence -use-color --format html > coverage/coverage.html
+llvm-cov show lib/libdart_pdfium.dylib -instr-profile=default.profdata lib/*.cc -path-equivalence -use-color --format html > coverage/coverage.html
 genhtml -o coverage coverage/lcov.info
 
 #https://storage.googleapis.com/dart-archive/channels/stable/release/latest/sdk/dartsdk-macos-x64-release.zip

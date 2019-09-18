@@ -1,0 +1,20 @@
+source_set("pdfium") {
+  sources = [
+    "pdfium.cc",
+    "pdfium.h",
+  ]
+  
+  deps = [
+    "//third_party/dart/runtime/bin:dart_io_api",
+  ]
+
+  include_dirs = ["//third_party/pdfium/public/"]
+
+  lib_dirs = ["//third_party/pdfium/out/"]
+
+  libs = ["pdfium"]
+
+  configs += [ "//third_party/dart/runtime:dart_config" ]
+
+  public_configs = [ "$flutter_root:config" ]
+}

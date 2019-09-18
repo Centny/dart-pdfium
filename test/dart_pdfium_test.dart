@@ -1,4 +1,4 @@
-import 'package:dart_pdfium/dart_pdfium.dart';
+import 'package:dart_pdfium/normal.dart';
 import 'package:test/test.dart';
 
 void testAll(String filepath) {
