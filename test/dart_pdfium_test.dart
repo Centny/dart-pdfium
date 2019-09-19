@@ -23,17 +23,18 @@ void testAll(String filepath) {
     print("page current BoundingBox:${page.boundingBox}");
     {
       //test bitmap and render
-      var bitmap = new Bitmap(768, 1024);
+      var bitmap = new Bitmap(page.width.floor(), page.height.floor(), page.transparency);
       print("Bitmap:${bitmap}");
       print("Bitmap current native:${bitmap.nativeObject}");
       print("Bitmap current Bitmap:${bitmap.nativeObject}");
       print("Bitmap current Width:${bitmap.width}");
       print("Bitmap current Height:${bitmap.height}");
       print("Bitmap current Format:${bitmap.format}");
-      print("Bitmap current Buffer:${bitmap.buffer}");
       print("Bitmap current Stride:${bitmap.stride}");
       bitmap.fillRect(0, 0, bitmap.width, bitmap.height, 0xFFFFFFFF);
-      page.render(bitmap, 0, 0, 769, 1024, 0, 0);
+      page.render(bitmap, 0, 0, page.width.floor(), page.height.floor(), 0, 0);
+      print("Bitmap current LastError:${DP_LastError()}");
+      print("Bitmap current Buffer:${bitmap.buffer.length}");
       bitmap.destory();
     }
     {
@@ -148,7 +149,7 @@ void main() {
       var filepath = "testing/bookmarks.pdf";
       print("load doc from $filepath");
       var doc = new Document(filepath, null);
-      new Bitmap(0, 0);
+      new Bitmap(0, 0, false);
       try {
         //peer error
         DP_CloseDocument(1);

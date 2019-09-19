@@ -5,7 +5,7 @@ source_set("pdfium") {
   ]
   
   deps = [
-    "//third_party/dart/runtime/bin:dart_io_api",
+    "//third_party/dart/runtime:dart_api",
   ]
 
   include_dirs = ["//third_party/pdfium/public/"]

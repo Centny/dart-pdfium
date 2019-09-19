@@ -4,6 +4,7 @@
 #include "dart_api.h"
 #include "fpdf_doc.h"
 #include "fpdf_text.h"
+#include "fpdf_edit.h"
 #include "fpdf_thumbnail.h"
 #include "fpdfview.h"
 // Forward declaration of ResolveName function.
@@ -297,6 +298,14 @@ void DP_GetPageBoundingBox(Dart_NativeArguments arguments)
   Dart_SetReturnValue(arguments, result);
 }
 
+void DP_Page_HasTransparency(Dart_NativeArguments arguments)
+{
+  NativeArgPeer(page, 0, 1);
+  bool has = FPDFPage_HasTransparency((FPDF_PAGE)page);
+  Dart_Handle result = Dart_NewBoolean(has);
+  Dart_SetReturnValue(arguments, result);
+}
+
 void DP_Bitmap_Create(Dart_NativeArguments arguments)
 {
   NativeArgInt64(width, 0);
@@ -352,8 +361,9 @@ void DP_Bitmap_GetBuffer(Dart_NativeArguments arguments)
 {
   NativeArgPeer(bitmap, 0, 1);
   void *buffer = FPDFBitmap_GetBuffer((FPDF_BITMAP)bitmap);
-  Dart_Handle result = DP_NewObject();
-  Dart_SetPeer(result, buffer);
+  int stride = FPDFBitmap_GetStride((FPDF_BITMAP)bitmap);
+  int height = FPDFBitmap_GetHeight((FPDF_BITMAP)bitmap);
+  Dart_Handle result = Dart_NewExternalTypedData(Dart_TypedData_kUint8, buffer, stride * height);
   Dart_SetReturnValue(arguments, result);
 }
 
@@ -745,6 +755,8 @@ Dart_NativeFunction DP_ResolveName(Dart_Handle name,
     result = DP_GetPageHeight;
   else if (strcmp("DP_GetPageBoundingBox", cname) == 0)
     result = DP_GetPageBoundingBox;
+  else if (strcmp("DP_Page_HasTransparency", cname) == 0)
+    result = DP_Page_HasTransparency;
   else if (strcmp("DP_Bitmap_Create", cname) == 0)
     result = DP_Bitmap_Create;
   // else if (strcmp("DP_Bitmap_CreateEx", cname) == 0)

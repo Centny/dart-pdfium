@@ -1,0 +1,13 @@
+diff --git a/BUILD.gn b/BUILD.gn
+index 36df0fc..6ae7277 100644
+--- a/BUILD.gn
++++ b/BUILD.gn
+@@ -10,7 +10,7 @@ if (current_cpu == "arm") {
+   import("//build/config/arm.gni")
+ }
+ 
+-assert(!is_ios, "This is not used on iOS, don't drag it in unintentionally")
++# assert(!is_ios, "This is not used on iOS, don't drag it in unintentionally")
+ 
+ source_set("libjpeg_headers") {
+   sources = [

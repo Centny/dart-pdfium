@@ -1,0 +1,50 @@
+diff --git a/core/fxcrt/fx_system.h b/core/fxcrt/fx_system.h
+index 9963b90cb..9cb6a32f0 100644
+--- a/core/fxcrt/fx_system.h
++++ b/core/fxcrt/fx_system.h
+@@ -48,7 +48,6 @@
+ #endif  // _FX_PLATFORM_ == _FX_PLATFORM_WINDOWS_
+ 
+ #if _FX_PLATFORM_ == _FX_PLATFORM_APPLE_
+-#include <Carbon/Carbon.h>
+ #include <libkern/OSAtomic.h>
+ #endif  // _FX_PLATFORM_ == _FX_PLATFORM_APPLE_
+ 
+diff --git a/core/fxge/BUILD.gn b/core/fxge/BUILD.gn
+index 962362fac..bf690405a 100644
+--- a/core/fxge/BUILD.gn
++++ b/core/fxge/BUILD.gn
+@@ -167,7 +167,7 @@ jumbo_source_set("fxge") {
+     sources += [ "fx_ge_linux.cpp" ]
+   }
+ 
+-  if (is_mac) {
++  if (is_mac || is_ios) {
+     sources += [
+       "apple/apple_int.h",
+       "apple/fx_apple_platform.cpp",
+diff --git a/core/fxge/apple/apple_int.h b/core/fxge/apple/apple_int.h
+index c58e75ccc..2a6f2f4ba 100644
+--- a/core/fxge/apple/apple_int.h
++++ b/core/fxge/apple/apple_int.h
+@@ -9,7 +9,7 @@
+ 
+ #include "core/fxcrt/fx_system.h"
+ 
+-#include <Carbon/Carbon.h>
++#include <CoreGraphics/CoreGraphics.h>
+ 
+ #include "core/fxge/cfx_gemodule.h"
+ #include "core/fxge/cfx_graphstatedata.h"
+diff --git a/testing/test.gni b/testing/test.gni
+index 5a8505fbf..cc246f17e 100644
+--- a/testing/test.gni
++++ b/testing/test.gni
+@@ -214,6 +214,7 @@ template("test") {
+       }
+ 
+       _bundle_id_suffix = target_name
++      ios_automatically_manage_certs = true
+       if (ios_automatically_manage_certs) {
+         # Use the same bundle identifier for all unit tests when managing
+         # certificates automatically as the number of free certs is limited.

@@ -13,3 +13,4 @@ environment:
 dev_dependencies:
   test: ^1.0.0
   test_coverage: ^0.3.0
+  image: ^2.1.4

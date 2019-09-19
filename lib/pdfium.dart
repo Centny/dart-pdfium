@@ -1,59 +1,5 @@
 part of dart.pdfium;
 
-// import 'dart-ext:dart_pdfium';
-void InitLibrary() native "DP_InitLibrary";
-void InitLibraryWithConfig(int version, String font) native "DP_InitLibraryWithConfig";
-void DestroyLibrary() native "DP_DestroyLibrary";
-int DP_LastError() native "DP_LastError";
-Object DP_LoadDocument(String filepath, password) native "DP_LoadDocument";
-void DP_CloseDocument(Object doc) native "DP_CloseDocument";
-int DP_GetFileVersion(Object doc) native "DP_GetFileVersion";
-int DP_GetDocPermissions(Object doc) native "DP_GetDocPermissions";
-int DP_GetSecurityHandlerRevision(Object doc) native "DP_GetSecurityHandlerRevision";
-int DP_GetPageCount(Object doc) native "DP_GetPageCount";
-Object DP_LoadPage(Object doc, int index) native "DP_LoadPage";
-void DP_ClosePage(Object page) native "DP_ClosePage";
-double DP_GetPageWidth(Object page) native "DP_GetPageWidth";
-double DP_GetPageHeight(Object page) native "DP_GetPageHeight";
-List DP_GetPageBoundingBox(Object page) native "DP_GetPageBoundingBox";
-Object DP_Bitmap_Create(int width, height, alpha) native "DP_Bitmap_Create";
-// Object DP_Bitmap_CreateEx(int width, height, format, Object firstScan, int stride) native "DP_Bitmap_CreateEx";
-int DP_Bitmap_GetFormat(Object bitmap) native "DP_Bitmap_GetFormat";
-void DP_Bitmap_FillRect(Object bitmap, int left, top, width, height, color) native "DP_Bitmap_FillRect";
-Object DP_Bitmap_GetBuffer(Object bitmap) native "DP_Bitmap_GetBuffer";
-int DP_Bitmap_GetWidth(Object bitmap) native "DP_Bitmap_GetWidth";
-int DP_Bitmap_GetHeight(Object bitmap) native "DP_Bitmap_GetHeight";
-int DP_Bitmap_GetStride(Object bitmap) native "DP_Bitmap_GetStride";
-int DP_Bitmap_Destroy(Object bitmap) native "DP_Bitmap_Destroy";
-int DP_RenderPageBitmap(Object bitmap, page, int start_x, start_y, size_x, size_y, rotate, flags) native "DP_RenderPageBitmap";
-Object DP_GetThumbnailAsBitmap(Object page) native "DP_GetThumbnailAsBitmap";
-Object DP_Text_LoadPage(Object page) native "DP_Text_LoadPage";
-void DP_Text_ClosePage(Object text) native "DP_Text_ClosePage";
-int DP_Text_CountChars(Object text) native "DP_Text_CountChars";
-int DP_Text_GetUnicode(Object text, int index) native "DP_Text_GetUnicode";
-double DP_Text_GetFontSize(Object text, int index) native "DP_Text_GetFontSize";
-String DP_Text_GetFontInfo(Object text, int index) native "DP_Text_GetFontInfo";
-double DP_Text_GetCharAngle(Object text, int index) native "DP_Text_GetCharAngle";
-List DP_Text_GetCharBox(Object text, int index) native "DP_Text_GetCharBox";
-List DP_Text_GetCharOrigin(Object text, int index) native "DP_Text_GetCharOrigin";
-int DP_Text_GetCharIndexAtPos(Object text, double x, y, xTolerance, yTolerance) native "DP_Text_GetCharIndexAtPos";
-String DP_Text_GetText(Object text, int start_index, count) native "DP_Text_GetText";
-int DP_Text_CountRects(Object text, int start_index, count) native "DP_Text_CountRects";
-List DP_Text_GetRect(Object text, int rect_index) native "DP_Text_GetRect";
-String DP_Text_GetBoundedText(Object text, double left, right, bottom, top) native "DP_Text_GetBoundedText";
-Object DP_Text_FindStart(Object text, findwhat, int flags, start_index) native "DP_Text_FindStart";
-bool DP_Text_FindNext(Object handle) native "DP_Text_FindNext";
-bool DP_Text_FindPrev(Object handle) native "DP_Text_FindPrev";
-int DP_Text_GetSchResultIndex(Object handle) native "DP_Text_GetSchResultIndex";
-int DP_Text_GetSchCount(Object handle) native "DP_Text_GetSchCount";
-void DP_Text_FindClose(Object handle) native "DP_Text_FindClose";
-Object DP_Bookmark_GetFirstChild(Object doc, bookmark) native "DP_Bookmark_GetFirstChild";
-Object DP_Bookmark_GetNextSibling(Object doc, bookmark) native "DP_Bookmark_GetNextSibling";
-String DP_Bookmark_GetTitle(Object bookmark) native "DP_Bookmark_GetTitle";
-// Object DP_Bookmark_Find(Object bookmark, String title) native "DP_Bookmark_Find";
-Object DP_Bookmark_GetDest(Object doc, bookmark) native "DP_Bookmark_GetDest";
-int DP_Dest_GetDestPageIndex(Object doc, dest) native "DP_Dest_GetDestPageIndex";
-
 class Rect {
   double left, right, top, bottom;
   String toString() => "Rect($left,$right,$top,$bottom)";
@@ -215,10 +161,10 @@ const bitmapFormatBGRA = 4;
 
 class Bitmap {
   Object _bitmap;
-  Bitmap(int width, height, {int alpha = 1}) {
+  Bitmap(int width, height, bool alpha) {
     // Bitmap(int width, height, {int alpha = 1, int format = 0, Object firstScan = null, int stride = 0}) {
     // if (firstScan == null) {
-    _bitmap = DP_Bitmap_Create(width, height, alpha);
+    _bitmap = DP_Bitmap_Create(width, height, alpha ? 1 : 0);
     // } else {
     // _bitmap = DP_Bitmap_CreateEx(width, height, format, firstScan, stride);
     // }
@@ -226,7 +172,7 @@ class Bitmap {
   Bitmap.fromNative(this._bitmap);
   Object get nativeObject => _bitmap;
   int get format => DP_Bitmap_GetFormat(_bitmap);
-  Object get buffer => DP_Bitmap_GetBuffer(_bitmap);
+  Uint8List get buffer => DP_Bitmap_GetBuffer(_bitmap);
   int get width => DP_Bitmap_GetWidth(_bitmap);
   int get height => DP_Bitmap_GetHeight(_bitmap);
   int get stride => DP_Bitmap_GetStride(_bitmap);
@@ -255,6 +201,8 @@ class Page {
     }
     return rect;
   }
+
+  bool get transparency => DP_Page_HasTransparency(_page);
 
   Bitmap loadThumbnail() {
     Object b = DP_GetThumbnailAsBitmap(_page);
