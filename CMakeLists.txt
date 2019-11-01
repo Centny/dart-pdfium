@@ -22,6 +22,7 @@ target_link_libraries(dart_pdfium pdfium)
 
 if (APPLE)
     target_link_options(dart_pdfium PRIVATE "-undefineddynamic_lookup")
+    target_link_libraries(dart_pdfium pdfium "-framework CoreGraphics")
 endif (APPLE)
 
 install(TARGETS dart_pdfium DESTINATION lib)

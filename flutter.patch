@@ -1,0 +1,108 @@
+diff --git a/lib/snapshot/libraries.json b/lib/snapshot/libraries.json
+index c4783158b..01d60cbe8 100644
+--- a/lib/snapshot/libraries.json
++++ b/lib/snapshot/libraries.json
+@@ -150,6 +150,9 @@
+       "ui": {
+         "uri": "../../lib/ui/ui.dart"
+       },
++      "pdfium": {
++        "uri": "../../lib/pdfium/pdfium.dart"
++      },
+       "vmservice_io": {
+         "uri": "../../../third_party/dart/runtime/bin/vmservice/vmservice_io.dart"
+       }
+diff --git a/lib/snapshot/libraries.yaml b/lib/snapshot/libraries.yaml
+index 7269819f7..199c4bbe0 100644
+--- a/lib/snapshot/libraries.yaml
++++ b/lib/snapshot/libraries.yaml
+@@ -147,6 +147,9 @@ flutter:
+     ui:
+       uri: "../../lib/ui/ui.dart"
+ 
++    pdfium:
++      uri: "../../lib/pdfium/pdfium.dart"
++
+     _vmservice:
+       uri: "../../../third_party/dart/sdk/lib/vmservice/vmservice.dart"
+ 
+diff --git a/runtime/BUILD.gn b/runtime/BUILD.gn
+index 5e41f19f0..d8df753d4 100644
+--- a/runtime/BUILD.gn
++++ b/runtime/BUILD.gn
+@@ -80,6 +80,7 @@ source_set("runtime") {
+     "$flutter_root/fml",
+     "$flutter_root/lib/io",
+     "$flutter_root/lib/ui",
++    "$flutter_root/lib/pdfium",
+     "$flutter_root/third_party/txt",
+     "//third_party/dart/runtime:dart_api",
+     "//third_party/dart/runtime/bin:dart_io_api",
+diff --git a/runtime/dart_isolate.cc b/runtime/dart_isolate.cc
+index 719cc6813..dbb7c0bc0 100644
+--- a/runtime/dart_isolate.cc
++++ b/runtime/dart_isolate.cc
+@@ -12,6 +12,7 @@
+ #include "flutter/lib/io/dart_io.h"
+ #include "flutter/lib/ui/dart_runtime_hooks.h"
+ #include "flutter/lib/ui/dart_ui.h"
++#include "flutter/lib/pdfium/pdfium.h"
+ #include "flutter/runtime/dart_service_isolate.h"
+ #include "flutter/runtime/dart_vm.h"
+ #include "flutter/runtime/dart_vm_lifecycle.h"
+@@ -261,6 +262,8 @@ bool DartIsolate::LoadLibraries(bool is_root_isolate) {
+ 
+   DartIO::InitForIsolate();
+ 
++  PdfiumInitForIsolate();
++
+   DartUI::InitForIsolate(is_root_isolate);
+ 
+   const bool is_service_isolate = Dart_IsServiceIsolate(isolate());
+diff --git a/sky/packages/sky_engine/BUILD.gn b/sky/packages/sky_engine/BUILD.gn
+index 6d033c4c5..834e8b1d0 100644
+--- a/sky/packages/sky_engine/BUILD.gn
++++ b/sky/packages/sky_engine/BUILD.gn
+@@ -23,6 +23,7 @@ import("//third_party/dart/sdk/lib/typed_data/typed_data_sources.gni")
+ import("//third_party/dart/sdk/lib/wasm/wasm_sources.gni")
+ import("$flutter_root/build/dart/rules.gni")
+ import("$flutter_root/lib/ui/dart_ui.gni")
++import("$flutter_root/lib/pdfium/pdfium.gni")
+ 
+ if (!is_fuchsia) {
+   copy("copy_sky_engine_authors") {
+@@ -182,6 +183,14 @@ copy("copy_dart_ui") {
+   ]
+ }
+ 
++copy("copy_dart_pdfium") {
++  sources = dart_pdfium_files
++
++  outputs = [
++    "$root_gen_dir/dart-pkg/sky_engine/lib/pdfium/{{source_file_part}}",
++  ]
++}
++
+ group("copy_dart_sdk") {
+   deps = [
+     ":_http",
+@@ -216,6 +225,7 @@ dart_pkg("sky_engine") {
+   deps = [
+     ":copy_dart_sdk",
+     ":copy_dart_ui",
++    ":copy_dart_pdfium",
+   ]
+ 
+   if (!is_fuchsia) {
+diff --git a/sky/packages/sky_engine/lib/_embedder.yaml b/sky/packages/sky_engine/lib/_embedder.yaml
+index 41d627a35..feb10a17d 100644
+--- a/sky/packages/sky_engine/lib/_embedder.yaml
++++ b/sky/packages/sky_engine/lib/_embedder.yaml
+@@ -13,6 +13,7 @@ embedded_libs:
+   "dart:math": "math/math.dart"
+   "dart:typed_data": "typed_data/typed_data.dart"
+   "dart:ui": "ui/ui.dart"
++  "dart:pdfium": "pdfium/pdfium.dart"
+   "dart:wasm": "wasm/wasm.dart"
+ 
+   "dart:_http": "_http/http.dart"

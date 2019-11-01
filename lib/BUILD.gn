@@ -10,7 +10,13 @@ source_set("pdfium") {
 
   include_dirs = ["//third_party/pdfium/public/"]
 
-  lib_dirs = ["//third_party/pdfium/out/"]
+  if (is_mac) {
+    lib_dirs = ["//third_party/pdfium/mac_x64/"]
+  }
+
+  if (is_ios) {
+    lib_dirs = ["//third_party/pdfium/combined/"]
+  }
 
   libs = ["pdfium"]
 

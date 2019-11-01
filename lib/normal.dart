@@ -4,7 +4,7 @@ import 'dart:typed_data';
 
 import 'dart-ext:dart_pdfium';
 
-part 'pdfium.dart';
+part 'pdfium_impl.dart';
 
 // import 'dart-ext:dart_pdfium';
 void InitLibrary() native "DP_InitLibrary";

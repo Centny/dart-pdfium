@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 dart_pdfium_files = [
+  "$flutter_root/lib/pdfium/pdfium_impl.dart",
   "$flutter_root/lib/pdfium/pdfium.dart",
-  "$flutter_root/lib/pdfium/flutter.dart",
 ]
 
-dart_pdfium_path = "$flutter_root/lib/pdfium/flutter.dart"
+dart_pdfium_path = "$flutter_root/lib/pdfium/pdfium.dart"

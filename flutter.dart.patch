@@ -1,0 +1,36 @@
+diff --git a/pkg/vm/lib/target/dart_runner.dart b/pkg/vm/lib/target/dart_runner.dart
+index fc814acc60..f521fec7ff 100644
+--- a/pkg/vm/lib/target/dart_runner.dart
++++ b/pkg/vm/lib/target/dart_runner.dart
+@@ -42,6 +42,7 @@ class DartRunnerTarget extends VmTarget {
+         'dart:zircon',
+         'dart:fuchsia',
+         'dart:vmservice_io',
++        'dart:pdfium',
+       ];
+ 
+   @override
+diff --git a/pkg/vm/lib/target/flutter.dart b/pkg/vm/lib/target/flutter.dart
+index 9d63c74c51..e86b676abd 100644
+--- a/pkg/vm/lib/target/flutter.dart
++++ b/pkg/vm/lib/target/flutter.dart
+@@ -44,6 +44,7 @@ class FlutterTarget extends VmTarget {
+ 
+         // Required for flutter.
+         'dart:ui',
++        'dart:pdfium',
+         'dart:vmservice_io',
+       ];
+ 
+diff --git a/pkg/vm/lib/target/flutter_runner.dart b/pkg/vm/lib/target/flutter_runner.dart
+index 816c03024d..968fb67cb0 100644
+--- a/pkg/vm/lib/target/flutter_runner.dart
++++ b/pkg/vm/lib/target/flutter_runner.dart
+@@ -43,6 +43,7 @@ class FlutterRunnerTarget extends VmTarget {
+         'dart:fuchsia',
+         'dart:vmservice_io',
+         'dart:ui',
++        'dart:pdfium',
+       ];
+ 
+   @override
